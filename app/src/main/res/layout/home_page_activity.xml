@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" xmlns:tools="http://schemas.android.com/tools" android:layout_width="match_parent" android:layout_height="match_parent" android:padding="24dp" tools:context=".HomePageActivity">
+
+    <!-- Welcome Text (Tetap) -->
+    <TextView
+        android:id="@+id/textViewWelcome"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        android:text="Welcome!"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Distance Section (Tetap) -->
+    <TextView
+        android:id="@+id/textViewDistanceLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        android:text="Jarak Sensor:"
+        android:textSize="20sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/textViewWelcome" />
+
+    <TextView
+        android:id="@+id/textViewDistanceValue"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Membaca..."
+        android:textSize="34sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/textViewDistanceLabel" />
+
+    <!-- === Weather Section (Diubah) === -->
+    <TextView
+        android:id="@+id/textViewWeatherCity"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="40dp"
+        android:text="Memuat Lokasi..."
+        android:textSize="18sp"
+        android:textStyle="bold"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/textViewDistanceValue" />
+
+    <!-- Icon Cuaca -->
+    <ImageView
+        android:id="@+id/imageViewWeatherIcon"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:layout_marginTop="16dp"
+        android:contentDescription="@string/weather_icon_description"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/guideline_weather_center"
+        app:layout_constraintTop_toBottomOf="@id/textViewWeatherCity"
+        tools:srcCompat="@mipmap/ic_launcher" /> <!-- Placeholder -->
+
+    <!-- Suhu Utama -->
+    <TextView
+        android:id="@+id/textViewWeatherTemp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="--°C"
+        android:textSize="48sp"
+        android:textStyle="bold"
+        app:layout_constraintStart_toEndOf="@id/imageViewWeatherIcon"
+        app:layout_constraintEnd_toStartOf="@id/guideline_weather_center"
+        app:layout_constraintTop_toTopOf="@id/imageViewWeatherIcon"
+        app:layout_constraintBottom_toBottomOf="@id/imageViewWeatherIcon"
+        android:layout_marginStart="8dp"/>
+
+    <!-- Deskripsi Cuaca -->
+    <TextView
+        android:id="@+id/textViewWeatherDesc"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Memuat deskripsi..."
+        android:textSize="16sp"
+        android:gravity="center"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/imageViewWeatherIcon" />
+
+    <!-- Guideline untuk membagi area detail -->
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guideline_weather_center"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.5" />
+
+    <!-- Detail Tambahan (Kanan) -->
+    <LinearLayout
+        android:id="@+id/layoutWeatherDetails"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginStart="16dp"
+        app:layout_constraintStart_toEndOf="@id/guideline_weather_center"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/imageViewWeatherIcon"
+        app:layout_constraintBottom_toBottomOf="@id/imageViewWeatherIcon" >
+
+        <TextView
+            android:id="@+id/textViewWeatherPrecipitation"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Presipitasi: --"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/textViewWeatherHumidity"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Kelembapan: --%"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/textViewWeatherWind"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Angin: -- km/h"
+            android:textSize="14sp" />
+    </LinearLayout>
+    <!-- === End Weather Section === -->
+
+
+    <!-- Logout Button (Tetap) -->
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/buttonLogout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="32dp"
+        android:text="Logout"
+        android:textSize="16sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+</androidx.constraintlayout.widget.ConstraintLayout>

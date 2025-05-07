@@ -1,0 +1,18 @@
+<resources>
+    <!-- Nama aplikasi kamu -->
+    <string name="app_name">PTA2</string>
+
+    <!-- Label untuk HomePageActivity -->
+    <string name="home_page_activity">Halaman Utama</string>
+
+    <!-- Label untuk RegisterActivity -->
+    <string name="register_activity">Daftar Akun</string>
+
+    <!-- Label untuk LoginActivity -->
+    <string name="login_activity">Masuk</string>
+
+    <string name="activity_history">History</string>
+
+    <string name="weather_icon_description">Ikon kondisi cuaca saat ini</string>
+
+</resources>
