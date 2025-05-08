@@ -3,7 +3,7 @@
     <string name="app_name">PTA2</string>
 
     <!-- Label untuk HomePageActivity -->
-    <string name="home_page_activity">Halaman Utama</string>
+    <string name="activity_home_page">Halaman Utama</string>
 
     <!-- Label untuk RegisterActivity -->
     <string name="register_activity">Daftar Akun</string>

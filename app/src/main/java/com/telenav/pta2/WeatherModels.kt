@@ -1,41 +1,43 @@
+// File: WeatherModels.kt (atau nama file model Anda)
 package com.telenav.pta2 // Sesuaikan package
 
 import com.google.gson.annotations.SerializedName
 
+// Model untuk CUACA SAAT INI
 data class WeatherResponse(
     @SerializedName("weather") val weather: List<WeatherDescription>?,
     @SerializedName("main") val main: MainStats?,
-    @SerializedName("wind") val wind: Wind?, // <-- TAMBAHKAN INI
+    @SerializedName("wind") val wind: Wind?,
     @SerializedName("name") val cityName: String?,
-    @SerializedName("cod") val responseCode: Int,
-    // Tambahkan Rain/Snow jika ingin menampilkan volume presipitasi
-    @SerializedName("rain") val rain: Precipitation?,
-    @SerializedName("snow") val snow: Precipitation?
+    @SerializedName("cod") val responseCode: Int, // Biasanya 200 untuk sukses
+    @SerializedName("rain") val rain: Precipitation?, // Data hujan, bisa null
+    @SerializedName("snow") val snow: Precipitation?  // Data salju, bisa null
 )
 
 data class WeatherDescription(
-    @SerializedName("main") val main: String?,
+    // @SerializedName("id") val id: Int?, // Jika API Anda mengirimkan ID
+    @SerializedName("main") val mainCondition: String?, // Ganti nama agar tidak bentrok jika ada var 'main' lain
     @SerializedName("description") val description: String?,
-    @SerializedName("icon") val icon: String? // Kode ikon
+    @SerializedName("icon") val icon: String?
 )
 
 data class MainStats(
     @SerializedName("temp") val temperature: Float?,
-    @SerializedName("feels_like") val feelsLike: Float?,
-    @SerializedName("temp_min") val tempMin: Float?,
-    @SerializedName("temp_max") val tempMax: Float?,
-    @SerializedName("pressure") val pressure: Int?,
-    @SerializedName("humidity") val humidity: Int?
+    @SerializedName("humidity") val humidity: Int?,
+    // @SerializedName("feels_like") val feels_like: Float?, // Jika API mengirimkan
+    // @SerializedName("temp_min") val temp_min: Float?,   // Jika API mengirimkan
+    // @SerializedName("temp_max") val temp_max: Float?,   // Jika API mengirimkan
+    // @SerializedName("pressure") val pressure: Int?      // Jika API mengirimkan
 )
 
-// <-- TAMBAHKAN DATA CLASS BARU INI -->
 data class Wind(
-    @SerializedName("speed") val speed: Float?, // Kecepatan (m/s default, bisa berbeda tergantung unit)
-    @SerializedName("deg") val degree: Int? // Arah angin (derajat)
+    @SerializedName("speed") val speed: Float?, // Biasanya m/s
+    @SerializedName("deg") val degree: Int?    // Derajat
+    // @SerializedName("gust") val gust: Float? // Jika API mengirimkan
 )
 
-// <-- TAMBAHKAN DATA CLASS BARU INI (Opsional, untuk volume) -->
 data class Precipitation(
-    @SerializedName("1h") val oneHour: Float? // Volume dalam 1 jam terakhir (mm)
-    // @SerializedName("3h") val threeHours: Float? // Volume dalam 3 jam terakhir (mm) - jika API menyediakan
+    // API bisa mengirim "1h" atau "3h", pastikan @SerializedName cocok
+    @SerializedName("1h") val oneHour: Float?,
+    // @SerializedName("3h") val threeHour: Float? // Jika API mengirimkan data 3 jam juga
 )

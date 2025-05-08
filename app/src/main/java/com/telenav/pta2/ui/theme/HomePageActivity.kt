@@ -1,228 +1,285 @@
-package com.telenav.pta2
+package com.telenav.pta2 // Sesuaikan package
 
-// Android Core & UI
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
-import android.widget.Button
-import android.widget.ImageView
-import android.widget.TextView
+import android.view.View
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.lifecycle.lifecycleScope
-
-// Firebase (Auth & Realtime Database)
+import com.bumptech.glide.Glide
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
-
-// Coroutines
+import com.telenav.pta2.databinding.ActivityHomePageBinding
+// Import model data Anda (pastikan path dan nama file benar)
+import com.telenav.pta2.WeatherResponse
+import com.telenav.pta2.WeatherForecastResponse
+import com.telenav.pta2.WeatherForecastItem // Mungkin tidak perlu jika di package yang sama dengan WeatherForecastResponse
 import kotlinx.coroutines.launch
-
-// Image Loading (Glide)
-import com.bumptech.glide.Glide
-
-// Utilities
 import java.io.IOException
-import java.util.Locale
+import java.text.SimpleDateFormat
+import java.util.*
+import kotlin.math.roundToInt
+
+// Ekstensi untuk membuat setiap kata dalam string menjadi huruf kapital di awal
+fun String.capitalizeWords(): String = split(" ").joinToString(" ") { word ->
+    word.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+}
 
 class HomePageActivity : ComponentActivity() {
-
-    // Firebase
+    private lateinit var binding: ActivityHomePageBinding
     private lateinit var auth: FirebaseAuth
     private lateinit var database: FirebaseDatabase
     private lateinit var distanceRef: DatabaseReference
     private var distanceListener: ValueEventListener? = null
 
-    // Weather API
-    private val weatherService = RetrofitClient.instance
+    private val weatherService by lazy { RetrofitClient.instance }
 
-    // UI Views
-    private lateinit var textViewWelcome: TextView
-    private lateinit var buttonLogout: Button
-
-    private lateinit var textViewDistanceLabel: TextView
-    private lateinit var textViewDistanceValue: TextView
-
-    private lateinit var textViewWeatherCity: TextView
-    private lateinit var imageViewWeatherIcon: ImageView
-    private lateinit var textViewWeatherTemp: TextView
-    private lateinit var textViewWeatherDesc: TextView
-    private lateinit var textViewWeatherPrecipitation: TextView
-    private lateinit var textViewWeatherHumidity: TextView
-    private lateinit var textViewWeatherWind: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.home_page_activity)
+        binding = ActivityHomePageBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        // Inisialisasi Firebase
         auth = FirebaseAuth.getInstance()
         database = FirebaseDatabase.getInstance()
         distanceRef = database.getReference("/sensor/jarak_cm")
 
-        // Inisialisasi Views
-        textViewWelcome = findViewById(R.id.textViewWelcome)
-        buttonLogout = findViewById(R.id.buttonLogout)
-
-        textViewDistanceLabel = findViewById(R.id.textViewDistanceLabel)
-        textViewDistanceValue = findViewById(R.id.textViewDistanceValue)
-
-        textViewWeatherCity = findViewById(R.id.textViewWeatherCity)
-        imageViewWeatherIcon = findViewById(R.id.imageViewWeatherIcon)
-        textViewWeatherTemp = findViewById(R.id.textViewWeatherTemp)
-        textViewWeatherDesc = findViewById(R.id.textViewWeatherDesc)
-        textViewWeatherPrecipitation = findViewById(R.id.textViewWeatherPrecipitation)
-        textViewWeatherHumidity = findViewById(R.id.textViewWeatherHumidity)
-        textViewWeatherWind = findViewById(R.id.textViewWeatherWind)
-
-        // Cek apakah user sudah login
-        val currentUser = auth.currentUser
-        if (currentUser != null) {
-            textViewWelcome.text = "Welcome!"
-        } else {
+        if (auth.currentUser == null) {
             goToLoginActivity()
             return
         }
 
-        // Tombol Logout
-        buttonLogout.setOnClickListener {
+        binding.textViewWelcome.text = "Hai, Selamat datang 👋"
+        // Anda bisa memuat cuaca kota default di sini jika diinginkan
+        // fetchDefaultWeatherData("Jakarta") // Misalnya
+
+        binding.buttonLogout.setOnClickListener {
             auth.signOut()
-            Toast.makeText(this, "Logout successful", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Logout berhasil", Toast.LENGTH_SHORT).show()
             goToLoginActivity()
         }
 
-        // Mulai listener data sensor dan ambil data cuaca
-        startDistanceListener()
-        fetchWeatherData("Jakarta")
-    }
-
-    // --- SENSOR JARAK (Firebase) ---
-    private fun startDistanceListener() {
-        if (distanceListener == null) {
-            distanceListener = object : ValueEventListener {
-                override fun onDataChange(snapshot: DataSnapshot) {
-                    if (snapshot.exists()) {
-                        val distanceValue = snapshot.getValue(Float::class.java)
-                        if (distanceValue != null) {
-                            val distanceText = String.format(Locale.getDefault(), "%.1f cm", distanceValue)
-                            textViewDistanceValue.text = distanceText
-                            Log.d("HomePageActivity", "Jarak diterima: $distanceText")
-                        } else {
-                            textViewDistanceValue.text = "Data N/A"
-                            Log.w("HomePageActivity", "Data jarak null di Firebase")
-                        }
-                    } else {
-                        textViewDistanceValue.text = "Path Kosong"
-                        Log.w("HomePageActivity", "Path ${distanceRef.path} tidak ditemukan di Firebase")
-                    }
-                }
-
-                override fun onCancelled(error: DatabaseError) {
-                    Log.e("HomePageActivity", "Gagal membaca data: ${error.message}")
-                    textViewDistanceValue.text = "Error DB!"
-                    Toast.makeText(baseContext, "Error reading distance DB: ${error.message}", Toast.LENGTH_SHORT).show()
-                }
+        binding.buttonSearchCity.setOnClickListener {
+            val city = binding.editTextCity.text.toString().trim()
+            if (city.isNotEmpty()) {
+                fetchDefaultWeatherData(city)
+            } else {
+                Toast.makeText(this, "Masukkan nama kota", Toast.LENGTH_SHORT).show()
             }
-            distanceRef.addValueEventListener(distanceListener!!)
-            Log.d("HomePageActivity", "Listener Jarak Firebase ditambahkan.")
-        } else {
-            Log.d("HomePageActivity", "Listener Jarak Firebase sudah berjalan.")
         }
+        startDistanceListener()
     }
 
-    // --- CUACA (OpenWeatherMap API) ---
-    private fun fetchWeatherData(cityName: String) {
+    private fun fetchDefaultWeatherData(city: String) {
+        fetchCurrentWeatherByCity(city)
+        fetchWeatherForecast(city)
+    }
+
+    private fun startDistanceListener() {
+        distanceListener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val distance = snapshot.getValue(Float::class.java)
+                val text = distance?.let { "%.1f cm".format(it) } ?: "Tidak ada data"
+                binding.textViewDistanceValue.text = text
+            }
+            override fun onCancelled(error: DatabaseError) {
+                binding.textViewDistanceValue.text = "Error DB"
+                Toast.makeText(this@HomePageActivity, "DB Error: ${error.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+        distanceRef.addValueEventListener(distanceListener!!)
+    }
+
+    private fun fetchCurrentWeatherByCity(city: String) {
         lifecycleScope.launch {
             try {
-                val apiKey = BuildConfig.WEATHER_API_KEY
-                if (apiKey.isEmpty() || apiKey.contains("MASUKKAN_API_KEY")) {
-                    Log.e("HomePageActivity", "API Key belum diatur dengan benar.")
-                    showWeatherError("API Key Error")
+                val key = BuildConfig.WEATHER_API_KEY
+                if (key.isEmpty() || key.contains("MASUKKAN_API_KEY") || key == "YOUR_API_KEY_HERE") {
+                    showWeatherError("API Key belum dikonfigurasi")
                     return@launch
                 }
-
-                val response = weatherService.getCurrentWeather(cityName, apiKey, "metric")
-                if (response.isSuccessful && response.body() != null) {
-                    updateWeatherUI(response.body()!!)
+                val response = weatherService.getCurrentWeatherByCity(city, key, "metric", "id")
+                if (response.isSuccessful) {
+                    response.body()?.let { weatherData ->
+                        Log.d("WeatherAPI", "Current Weather Response: $weatherData")
+                        if (weatherData.responseCode == 200) {
+                            updateCurrentWeatherUI(weatherData)
+                        } else {
+                            showWeatherError("API Cuaca Saat Ini: ${weatherData.responseCode}")
+                        }
+                    } ?: showWeatherError("Data cuaca saat ini kosong")
                 } else {
-                    val errorCode = response.code()
-                    val errorMsg = response.errorBody()?.string() ?: "Unknown API error"
-                    Log.e("HomePageActivity", "Error API Cuaca ($errorCode): $errorMsg")
-                    showWeatherError(if (errorCode == 401) "API Key Salah" else "Gagal: $errorCode")
+                    val errorBody = response.errorBody()?.string()
+                    Log.e("WeatherAPI", "Current Weather API Error: ${response.code()} - ${response.message()}. Body: $errorBody")
+                    showWeatherError("Cuaca Saat Ini: ${response.code()}")
                 }
             } catch (e: IOException) {
-                Log.e("HomePageActivity", "Network Error: ${e.message}")
-                showWeatherError("Network Error")
+                Log.e("WeatherAPI", "Current Weather Network Error", e)
+                showWeatherError("Jaringan Cuaca Saat Ini Error")
             } catch (e: Exception) {
-                Log.e("HomePageActivity", "Error: ${e.message}")
-                showWeatherError("Error")
+                Log.e("WeatherAPI", "Current Weather Unexpected Error", e)
+                showWeatherError("Error Cuaca Saat Ini: ${e.localizedMessage}")
             }
         }
     }
 
-    private fun updateWeatherUI(data: WeatherResponse) {
-        textViewWeatherCity.text = data.cityName ?: "Unknown"
-        textViewWeatherTemp.text = data.main?.temperature?.let {
-            String.format(Locale.getDefault(), "%.0f°C", it)
-        } ?: "--°C"
-
-        val description = data.weather?.firstOrNull()?.description
-        textViewWeatherDesc.text = description?.replaceFirstChar {
-            if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
-        } ?: "No description"
-
-        textViewWeatherHumidity.text = "Kelembapan: ${data.main?.humidity ?: "--"}%"
-        val windSpeed = data.wind?.speed?.times(3.6)
-        textViewWeatherWind.text = if (windSpeed != null) {
-            String.format(Locale.getDefault(), "Angin: %.1f km/h", windSpeed)
-        } else {
-            "Angin: -- km/h"
+    private fun fetchWeatherForecast(city: String) {
+        lifecycleScope.launch {
+            try {
+                val key = BuildConfig.WEATHER_API_KEY
+                if (key.isEmpty() || key.contains("MASUKKAN_API_KEY") || key == "YOUR_API_KEY_HERE") {
+                    showForecastError("API Key belum dikonfigurasi") // Pesan error spesifik untuk forecast
+                    return@launch
+                }
+                val response = weatherService.getWeatherForecast(city, key, "metric", "id")
+                if (response.isSuccessful) {
+                    response.body()?.let { forecastResponse ->
+                        Log.d("WeatherAPI", "Forecast Response: $forecastResponse")
+                        processAndDisplayDailyForecast(forecastResponse)
+                    } ?: showForecastError("Data perkiraan kosong")
+                } else {
+                    val errorBody = response.errorBody()?.string()
+                    Log.e("WeatherAPI", "Forecast API Error: ${response.code()} - ${response.message()}. Body: $errorBody")
+                    showForecastError("Perkiraan: ${response.code()}")
+                }
+            } catch (e: IOException) {
+                Log.e("WeatherAPI", "Forecast Network Error", e)
+                showForecastError("Jaringan Perkiraan Error")
+            } catch (e: Exception) {
+                Log.e("WeatherAPI", "Forecast Unexpected Error", e)
+                showForecastError("Error Perkiraan: ${e.localizedMessage}")
+            }
         }
+    }
 
-        textViewWeatherPrecipitation.text = when {
-            data.rain?.oneHour != null -> String.format(Locale.getDefault(), "Hujan: %.1f mm/1j", data.rain.oneHour)
-            data.snow?.oneHour != null -> String.format(Locale.getDefault(), "Salju: %.1f mm/1j", data.snow.oneHour)
-            else -> "Presipitasi: 0 mm/1j"
+    private fun updateCurrentWeatherUI(data: WeatherResponse) = with(binding) {
+        textViewWeatherCity.text = data.cityName?.capitalizeWords() ?: "Kota Tidak Ditemukan"
+        data.main?.temperature?.let { textViewWeatherTemp.text = "%.1f°C".format(it) } ?: run { textViewWeatherTemp.text = "--°C" }
+        val weatherDesc = data.weather?.firstOrNull()
+        textViewWeatherDesc.text = weatherDesc?.description?.capitalizeWords() ?: "Tidak ada deskripsi"
+        data.main?.humidity?.let { textViewWeatherHumidity.text = "Kelembapan: $it%" } ?: run { textViewWeatherHumidity.text = "Kelembapan: --%" }
+
+        data.wind?.speed?.let { speedMs ->
+            val speedKmh = speedMs * 3.6
+            var windText = "Angin: ${speedKmh.roundToInt()} km/h"
+            data.wind.degree?.let { degrees -> windText += " (${getWindDirection(degrees)})" }
+            textViewWeatherWind.text = windText
+        } ?: run { textViewWeatherWind.text = "Angin: -- km/h" }
+
+        var precipitationText = "Presipitasi: --"
+        data.rain?.oneHour?.let { volume -> precipitationText = "Hujan: %.1f mm/jam".format(volume) }
+        data.snow?.oneHour?.let { volume ->
+            if (precipitationText != "Presipitasi: --" && data.rain?.oneHour == null) {
+                precipitationText = "Salju: %.1f mm/jam".format(volume)
+            } else if (precipitationText != "Presipitasi: --") {
+                precipitationText += "\nSalju: %.1f mm/jam".format(volume)
+            } else {
+                precipitationText = "Salju: %.1f mm/jam".format(volume)
+            }
         }
+        textViewWeatherPrecipitation.text = precipitationText
 
-        val iconCode = data.weather?.firstOrNull()?.icon
+        val iconCode = weatherDesc?.icon
         if (iconCode != null) {
-            val iconUrl = "https://openweathermap.org/img/wn/${iconCode}@4x.png"
-            Glide.with(this)
-                .load(iconUrl)
-                .placeholder(R.drawable.ic_launcher_background)
-                .error(R.drawable.ic_launcher_foreground)
+            val iconUrl = "https://openweathermap.org/img/wn/$iconCode@2x.png"
+            Glide.with(this@HomePageActivity).load(iconUrl)
+                .placeholder(R.drawable.ic_weather_placeholder)
+                .error(R.drawable.ic_weather_error)
                 .into(imageViewWeatherIcon)
         } else {
-            imageViewWeatherIcon.setImageResource(R.drawable.ic_launcher_background)
+            imageViewWeatherIcon.setImageResource(R.drawable.ic_weather_placeholder)
         }
     }
 
-    private fun showWeatherError(message: String) {
-        textViewWeatherCity.text = "Error Cuaca"
-        imageViewWeatherIcon.setImageResource(R.drawable.ic_launcher_foreground)
-        textViewWeatherTemp.text = "--°C"
-        textViewWeatherDesc.text = message
-        textViewWeatherPrecipitation.text = "Presipitasi: --"
-        textViewWeatherHumidity.text = "Kelembapan: --%"
-        textViewWeatherWind.text = "Angin: -- km/h"
-        Toast.makeText(this, "Weather Error: $message", Toast.LENGTH_SHORT).show()
+    private fun processAndDisplayDailyForecast(forecast: WeatherForecastResponse) = with(binding) {
+        val dailyForecasts = mutableListOf<WeatherForecastItem>()
+        val processedDates = mutableSetOf<String>()
+        val dateOnlyFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val displayDateFormat = SimpleDateFormat("EEEE, dd MMM", Locale("id", "ID"))
+
+        forecast.list.forEach { item ->
+            val date = Date(item.dt * 1000L)
+            val dateString = dateOnlyFormat.format(date)
+            if (!processedDates.contains(dateString)) {
+                // Coba pilih item sekitar tengah hari jika memungkinkan (misal, antara jam 11 dan 14)
+                // Ini adalah heuristik sederhana, bisa disesuaikan
+                val calendar = Calendar.getInstance().apply { time = date }
+                val hourOfDay = calendar.get(Calendar.HOUR_OF_DAY)
+                if (dailyForecasts.none { dateOnlyFormat.format(Date(it.dt * 1000L)) == dateString } ||
+                    (hourOfDay in 11..14) ) { // Prioritaskan jam tengah hari jika belum ada untuk hari itu
+                    // Jika sudah ada untuk hari itu tapi ini jam tengah hari, ganti. (Logika bisa lebih kompleks)
+                    dailyForecasts.removeAll { dateOnlyFormat.format(Date(it.dt * 1000L)) == dateString } // Hapus entri lama untuk hari ini
+                    dailyForecasts.add(item)
+                    processedDates.add(dateString)
+                } else if (dailyForecasts.none{ dateOnlyFormat.format(Date(it.dt * 1000L)) == dateString }){
+                    // Jika tidak ada jam tengah hari & belum ada entri untuk hari itu, ambil saja yang ini.
+                    dailyForecasts.add(item)
+                    processedDates.add(dateString)
+                }
+            }
+        }
+        // Sortir berdasarkan tanggal untuk memastikan urutan yang benar
+        dailyForecasts.sortBy { it.dt }
+
+        // Ambil maksimal 3 hari
+        val finalDailyDisplay = dailyForecasts.take(3)
+
+        textViewWeatherDay1.text = "Perkiraan 1: Data tidak tersedia"
+        textViewWeatherDay2.text = "Perkiraan 2: Data tidak tersedia"
+        textViewWeatherDay3.text = "Perkiraan 3: Data tidak tersedia"
+
+        finalDailyDisplay.forEachIndexed { index, dailyItem ->
+            val date = Date(dailyItem.dt * 1000L)
+            val formattedDisplayDate = displayDateFormat.format(date)
+            // Pastikan MainData dan WeatherInfo tidak null dan memiliki data
+            val tempText = dailyItem.main?.temp?.let { "%.1f°C".format(it) } ?: "--°C"
+            val description = dailyItem.weather?.firstOrNull()?.description?.capitalizeWords() ?: "-"
+
+            val dayText = "Perkiraan ${index + 1}:\n" +
+                    "$formattedDisplayDate\n" +
+                    "$description\n" +
+                    "Suhu: $tempText"
+            when (index) {
+                0 -> textViewWeatherDay1.text = dayText
+                1 -> textViewWeatherDay2.text = dayText
+                2 -> textViewWeatherDay3.text = dayText
+            }
+        }
     }
 
-    // --- Navigasi ---
+    private fun getWindDirection(degrees: Int): String {
+        val directions = arrayOf("U", "UTL", "TL", "TTL", "T", "TGR", "GR", "BBL", "B", "BBD", "BD", "SBD", "S", "SBL", "BL", "UBL")
+        return directions[((degrees % 360) / 22.5).roundToInt() % 16]
+    }
+
+    private fun showWeatherError(message: String) = with(binding) {
+        Toast.makeText(this@HomePageActivity, "Cuaca Saat Ini: $message", Toast.LENGTH_SHORT).show()
+        textViewWeatherCity.text = "Gagal Memuat"
+        textViewWeatherTemp.text = "--°C"
+        textViewWeatherDesc.text = "Error: $message"
+        imageViewWeatherIcon.setImageResource(R.drawable.ic_weather_placeholder)
+        textViewWeatherHumidity.text = "Kelembapan: --%"
+        textViewWeatherWind.text = "Angin: -- km/h"
+        textViewWeatherPrecipitation.text = "Presipitasi: --"
+    }
+
+    private fun showForecastError(message: String) {
+        Toast.makeText(this, "Perkiraan: $message", Toast.LENGTH_SHORT).show()
+        binding.textViewWeatherDay1.text = "Perkiraan 1: Error"
+        binding.textViewWeatherDay2.text = "Perkiraan 2: Error"
+        binding.textViewWeatherDay3.text = "Perkiraan 3: Error"
+    }
+
     private fun goToLoginActivity() {
-        val intent = Intent(this, LoginActivity::class.java)
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        startActivity(intent)
+        startActivity(Intent(this, LoginActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        })
         finish()
     }
 
-    // --- Lifecycle ---
     override fun onDestroy() {
         super.onDestroy()
-        if (distanceListener != null) {
-            distanceRef.removeEventListener(distanceListener!!)
-            Log.d("HomePageActivity", "Listener Jarak Firebase dihapus.")
-        }
+        distanceListener?.let { distanceRef.removeEventListener(it) }
     }
 }

@@ -3,6 +3,10 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -18,7 +22,7 @@
         <activity
             android:name=".HomePageActivity"
             android:exported="true"
-            android:label="@string/home_page_activity"
+            android:label="@string/activity_home_page"
             android:theme="@style/Theme.PTA2">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
