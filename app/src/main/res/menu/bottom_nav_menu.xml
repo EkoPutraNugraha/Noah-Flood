@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/navigation_dashboard_home"
+        android:icon="@drawable/ic_dashboard_nav_home"
+        android:title="Beranda"/>
+    <item
+        android:id="@+id/navigation_dashboard_forecast"
+        android:icon="@drawable/ic_dashboard_nav_cloud"
+        android:title="Cuaca"/>
+    <!-- Central FAB is not a menu item -->
+    <item android:title="" android:enabled="false"/> <!-- Placeholder for spacing -->
+    <item
+        android:id="@+id/navigation_dashboard_map"
+        android:icon="@drawable/ic_dashboard_nav_globe"
+        android:title="Peta"/>
+    <item
+        android:id="@+id/navigation_dashboard_menu"
+        android:icon="@drawable/ic_dashboard_nav_menu"
+        android:title="Menu"/>
+</menu>
